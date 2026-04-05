@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.database import get_db
 from app.models import Product, Category
@@ -38,7 +39,7 @@ async def list_products(
     sort: str = "newest",  # newest, price_asc, price_desc, rating
     db: AsyncSession = Depends(get_db),
 ):
-    query = select(Product).where(Product.is_active == True)
+    query = select(Product).options(selectinload(Product.category)).where(Product.is_active == True)
 
     if category:
         query = query.join(Category).where(Category.slug == category)
@@ -82,6 +83,7 @@ async def list_products(
 async def featured_products(db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Product)
+        .options(selectinload(Product.category))
         .where(Product.is_active == True, Product.is_featured == True)
         .order_by(desc(Product.created_at))
         .limit(8)
@@ -91,7 +93,7 @@ async def featured_products(db: AsyncSession = Depends(get_db)):
 
 @router.get("/products/{slug}", response_model=ProductOut)
 async def get_product(slug: str, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Product).where(Product.slug == slug))
+    result = await db.execute(select(Product).options(selectinload(Product.category)).where(Product.slug == slug))
     product = result.scalar()
     if not product:
         raise HTTPException(404, "Product not found")
