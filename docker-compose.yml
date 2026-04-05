@@ -1,0 +1,28 @@
+services:
+  backend:
+    build: ./backend
+    container_name: shop-backend
+    restart: unless-stopped
+    volumes:
+      - ./data:/app/data
+    env_file:
+      - ./backend/.env
+    ports:
+      - "8001:8000"
+    networks:
+      - shop
+
+  frontend:
+    build: ./frontend
+    container_name: shop-frontend
+    restart: unless-stopped
+    ports:
+      - "3001:80"
+    depends_on:
+      - backend
+    networks:
+      - shop
+
+networks:
+  shop:
+    driver: bridge
